@@ -5,4 +5,3 @@ plotly
 scikit-learn
 geopy
 requests
-tensorflow-cpu
