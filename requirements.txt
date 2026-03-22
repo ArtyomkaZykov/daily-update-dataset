@@ -3,6 +3,6 @@ pandas
 numpy
 plotly
 scikit-learn
-tensorflow
 geopy
 requests
+tensorflow
