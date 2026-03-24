@@ -9,7 +9,13 @@ AVG_RUSSIAN_SALARY = 70000
 
 def load_existing_data():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
+        df = pd.read_csv(DATA_FILE)
+        # Преобразуем колонку date в datetime, автоматически определяя формат
+        df['date'] = pd.to_datetime(df['date'], format='mixed', errors='coerce')
+        # Если всё ещё есть ошибки, попробуем без формата
+        if df['date'].isna().any():
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        return df
     return None
 
 def fetch_today_data():
@@ -69,8 +75,7 @@ def fetch_today_data():
 def main():
     existing = load_existing_data()
     if existing is not None and not existing.empty:
-        # 🔧 Преобразуем колонку date в datetime
-        existing['date'] = pd.to_datetime(existing['date'])
+        # Преобразование уже сделано в load_existing_data
         if CURRENT_DATE in existing['date'].dt.date.unique():
             print(f"Данные за {CURRENT_DATE} уже есть. Выход.")
             return
