@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
+
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import MinMaxScaler
 import warnings
@@ -173,11 +173,27 @@ def fetch_today_data():
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_full_dataset():
     if os.path.exists(DATA_FILE):
+        # Читаем CSV как строки сначала, чтобы избежать проблем с датами
         df = pd.read_csv(DATA_FILE)
-        # Принудительно преобразуем колонку date в datetime
-        df['date'] = pd.to_datetime(df['date'])
+
+        # Принудительно преобразуем колонку date в datetime с обработкой ошибок
+        # format='mixed' позволяет обрабатывать разные форматы
+        df['date'] = pd.to_datetime(df['date'], format='mixed', errors='coerce')
+
+        # Проверяем, есть ли NaN в датах (это значит, что парсинг не удался)
+        if df['date'].isna().any():
+            st.warning(f"Обнаружены некорректные даты. Попытка исправить...")
+            # Пробуем другой подход: сначала читаем как строки, потом парсим
+            df_temp = pd.read_csv(DATA_FILE)
+            df_temp['date'] = pd.to_datetime(df_temp['date'], errors='coerce')
+            df = df_temp
+
         today = CURRENT_DATE
-        if today not in df['date'].dt.date.unique():
+        # Преобразуем today в datetime для сравнения
+        today_dt = datetime.combine(today, datetime.min.time())
+
+        # Проверяем, есть ли данные за сегодня
+        if today_dt not in df['date'].dt.date.unique():
             new_data = fetch_today_data()
             if new_data is not None and not new_data.empty:
                 df = pd.concat([df, new_data], ignore_index=True)
