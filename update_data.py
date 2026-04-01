@@ -1,3 +1,4 @@
+# update_data.py
 import pandas as pd
 import os
 from datetime import date
@@ -9,31 +10,20 @@ AVG_RUSSIAN_SALARY = 70000
 
 def load_existing_data():
     if os.path.exists(DATA_FILE):
-        df = pd.read_csv(DATA_FILE)
-        # Преобразуем колонку date в datetime, автоматически определяя формат
-        df['date'] = pd.to_datetime(df['date'], format='mixed', errors='coerce')
-        # Если всё ещё есть ошибки, попробуем без формата
-        if df['date'].isna().any():
-            df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        return df
+        return pd.read_csv(DATA_FILE, parse_dates=['date'])
     return None
 
-def fetch_today_data():
+def fetch_and_append():
     expert_df = get_expert_data()
     professions_list = expert_df['profession'].tolist()
 
     try:
         salary_df = parse_hh_salaries(professions_list)
-        print("✅ Данные hh.ru обновлены")
     except Exception as e:
-        print(f"❌ Ошибка парсинга hh.ru: {e}")
-        print("🔄 Использую резервные данные")
+        print(f"Ошибка парсинга: {e}")
         salary_df = get_backup_salaries()
 
     merged_df = expert_df.merge(salary_df, on='profession', how='left')
-    if merged_df.empty:
-        return None
-
     regions = get_regional_data()
     new_rows = []
 
@@ -70,27 +60,22 @@ def fetch_today_data():
                 'trend': trend
             })
 
-    return pd.DataFrame(new_rows)
+    new_df = pd.DataFrame(new_rows)
+    return new_df
 
 def main():
     existing = load_existing_data()
     if existing is not None and not existing.empty:
-        # Преобразование уже сделано в load_existing_data
         if CURRENT_DATE in existing['date'].dt.date.unique():
             print(f"Данные за {CURRENT_DATE} уже есть. Выход.")
             return
-
-    new_data = fetch_today_data()
-    if new_data is None or new_data.empty:
-        print("Нет новых данных для добавления.")
-        return
-
-    if existing is None:
-        new_data.to_csv(DATA_FILE, index=False)
-        print(f"Создан новый датасет: {len(new_data)} записей.")
-    else:
-        combined = pd.concat([existing, new_data], ignore_index=True)
-        combined.to_csv(DATA_FILE, index=False)
+    new_data = fetch_and_append()
+    if new_data is not None and not new_data.empty:
+        if existing is None:
+            new_data.to_csv(DATA_FILE, index=False)
+        else:
+            combined = pd.concat([existing, new_data], ignore_index=True)
+            combined.to_csv(DATA_FILE, index=False)
         print(f"Добавлено {len(new_data)} записей за {CURRENT_DATE}")
 
 if __name__ == "__main__":
