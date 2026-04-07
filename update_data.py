@@ -66,12 +66,15 @@ def fetch_and_append():
 def main():
     existing = load_existing_data()
     if existing is not None and not existing.empty:
-        if CURRENT_DATE in existing['date'].dt.date.unique():
+        # Гарантируем datetime тип
+        existing['date'] = pd.to_datetime(existing['date'], errors='coerce')
+        existing = existing.dropna(subset=['date'])
+        if not existing.empty and CURRENT_DATE in existing['date'].dt.date.unique():
             print(f"Данные за {CURRENT_DATE} уже есть. Выход.")
             return
     new_data = fetch_and_append()
     if new_data is not None and not new_data.empty:
-        if existing is None:
+        if existing is None or existing.empty:
             new_data.to_csv(DATA_FILE, index=False)
         else:
             combined = pd.concat([existing, new_data], ignore_index=True)
