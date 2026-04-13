@@ -216,7 +216,7 @@ def generate_historical_data():
                 if year == CURRENT_YEAR:
                     record_date = CURRENT_DATE
                 else:
-                    record_date = datetime(year, 1, 1)
+                    record_date = datetime(year, 1, 1).date()
 
                 data.append({
                     'date': record_date,
@@ -326,7 +326,7 @@ def get_full_dataset():
 
         full_df = generate_historical_data()
         if full_df is not None:
-            full_df.to_csv(DATA_FILE, index=False)
+            full_df.to_csv(DATA_FILE, index=False, date_format='%Y-%m-%d')
             st.sidebar.success(f"💾 Датасет создан: {len(full_df)} записей.")
             return full_df
         else:
