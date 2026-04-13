@@ -10,12 +10,14 @@ AVG_RUSSIAN_SALARY = 70000
 def load_existing_data():
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
-        # Читаем даты строго в формате ГГГГ-ММ-ДД
-        df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
-        df = df.dropna(subset=['date'])  # удаляем битые строки
+        # Гибкое преобразование – автоматически определит формат
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df = df.dropna(subset=['date'])
+        # Убедимся, что время обнулено (только дата)
+        df['date'] = df['date'].dt.normalize()
         return df
     return None
-
+    
 def fetch_and_append():
     expert_df = get_expert_data()
     professions_list = expert_df['profession'].tolist()
