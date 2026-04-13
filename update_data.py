@@ -1,4 +1,3 @@
-# update_data.py
 import pandas as pd
 import os
 from datetime import date
@@ -10,7 +9,11 @@ AVG_RUSSIAN_SALARY = 70000
 
 def load_existing_data():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE, parse_dates=['date'])
+        df = pd.read_csv(DATA_FILE)
+        # Читаем даты строго в формате ГГГГ-ММ-ДД
+        df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
+        df = df.dropna(subset=['date'])  # удаляем битые строки
+        return df
     return None
 
 def fetch_and_append():
@@ -66,19 +69,19 @@ def fetch_and_append():
 def main():
     existing = load_existing_data()
     if existing is not None and not existing.empty:
-        # Гарантируем datetime тип
-        existing['date'] = pd.to_datetime(existing['date'], errors='coerce')
-        existing = existing.dropna(subset=['date'])
-        if not existing.empty and CURRENT_DATE in existing['date'].dt.date.unique():
+        if CURRENT_DATE in existing['date'].dt.date.unique():
             print(f"Данные за {CURRENT_DATE} уже есть. Выход.")
             return
+    
     new_data = fetch_and_append()
     if new_data is not None and not new_data.empty:
+        new_data['date'] = pd.to_datetime(new_data['date'])  # унификация типа
         if existing is None or existing.empty:
-            new_data.to_csv(DATA_FILE, index=False)
+            new_data.to_csv(DATA_FILE, index=False, date_format='%Y-%m-%d')
         else:
             combined = pd.concat([existing, new_data], ignore_index=True)
-            combined.to_csv(DATA_FILE, index=False)
+            combined = combined.sort_values('date')
+            combined.to_csv(DATA_FILE, index=False, date_format='%Y-%m-%d')
         print(f"Добавлено {len(new_data)} записей за {CURRENT_DATE}")
 
 if __name__ == "__main__":
